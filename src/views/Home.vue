@@ -109,6 +109,8 @@
                 <!-- <a-divider type="vertical">With Text</a-divider> -->
               </div>
               <div class="jsEditor" ref="jsEditor" />
+              <div class="box"></div>
+              <div class="phpEditor" ref="phpEditor"></div>
             </div>
           </a-layout-content>
         </a-layout-content>
@@ -178,8 +180,8 @@ import {
   toRefs,
   toRaw,
   onMounted,
-  nextTick,
-  watchEffect
+  nextTick
+  // watchEffect
 } from "vue";
 import { useForm } from "@ant-design-vue/use";
 import { message } from "ant-design-vue";
@@ -242,12 +244,15 @@ export default {
     });
     const jsonEditor = ref(null);
     const jsEditor = ref(null);
+    const phpEditor = ref(null);
     const beautify = (code, type) => {
       return Beautify[type](code);
     };
     let monacoJsonEditor = null;
     let monacoJsEditor = null;
-    const onCode = (monacoJsonEditor, monacoJsEditor) => {
+    let monacoPhpEditor = null;
+    const onCode = (monacoJsonEditor, monacoJsEditor, monacoPhpEditor) => {
+      // todo 抽取 转成两个方法来处理
       if (monacoJsonEditor !== null && monacoJsEditor !== null) {
         console.log("生成代码");
         console.log("monacoJsonEditor", monacoJsonEditor);
@@ -272,8 +277,40 @@ export default {
         console.log(str);
         str = beautify(str, "js");
         monacoJsEditor.setValue(str);
+        //
+        let phpStr = "";
+        for (let i = 0; i < bToObj.length; i++) {
+          // bToObj[i]
+          phpStr += `public function ${bToObj[i].url} ()
+            {
+                $res = $this->skin->${bToObj[i].url}($this->${bToObj[
+            i
+          ].method.toLowerCase()}());
+                $this->view($res);
+            }\n`;
+        }
+        console.log(phpStr);
+        // phpStr = beautify(phpStr, "php");
+        monacoPhpEditor.setValue(phpStr);
       }
+      // {
+      //   const a = monacoJsonEditor.getValue();
+      //   console.log(a);
+      //   // 将获取到的json转为js对象
+      //   var bToObj = JSON.parse(a);
+      // }
+      // 遍历生成php代码
     };
+
+    // /**
+    //  * skin生成
+    //  */
+    // public function createSkin ()
+    // {
+    //     $res = $this->skin->createSkin($this->post());
+    //     $this->view($res);
+    // }
+
     onMounted(() => {
       //   document.addEventListener("cut", function(e) {
       //     console.log(e);
@@ -292,16 +329,22 @@ export default {
           theme: "vs-dark"
         });
         monacoJsEditor = monaco.editor.create(jsEditor.value, {
-          value: 'console.log("Hello, world")',
+          value: "待生成的js代码",
           language: "javascript",
+          theme: "vs-dark"
+        });
+        monacoPhpEditor = monaco.editor.create(phpEditor.value, {
+          value: "待生成的php代码",
+          language: "php",
           theme: "vs-dark"
         });
 
         window.addEventListener("resize", () => {
           monacoJsonEditor.layout();
           monacoJsEditor.layout();
+          monacoPhpEditor.layout();
         });
-        onCode(monacoJsonEditor, monacoJsEditor);
+        onCode(monacoJsonEditor, monacoJsEditor, monacoPhpEditor);
       });
       nextTick(() => {
         monacoJsonEditor.layout();
@@ -471,7 +514,7 @@ export default {
         });
         monacoJsonEditor.setValue(jsonBeautify(state.jsonCode, null, 2, 30));
         console.log(state.jsonCode);
-        onCode(monacoJsonEditor, monacoJsEditor);
+        onCode(monacoJsonEditor, monacoJsEditor, monacoPhpEditor);
       }
     };
     const downloadCode = () => {
@@ -484,13 +527,14 @@ export default {
         saveAs(content, "example.zip");
       });
     };
-    watchEffect(() => {
-      console.log("执行watch");
-      onCode(monacoJsonEditor, monacoJsEditor, state.jsonCode);
-    });
+    // watchEffect(() => {
+    //   console.log("执行watch");
+    //   onCode(monacoJsonEditor, monacoJsEditor, state.jsonCode);
+    // });
     return {
       jsonEditor,
       jsEditor,
+      phpEditor,
       onCode,
       onCopyCode,
       data,
@@ -527,6 +571,15 @@ export default {
   }
 }
 .jsEditor {
+  height: 700px;
+  // width: 700px;
+  max-width: 700px;
+  flex: 2;
+  ::v-deep(.view-lines) {
+    text-align: left;
+  }
+}
+.phpEditor {
   height: 700px;
   // width: 700px;
   max-width: 700px;
